@@ -1,0 +1,26 @@
+# Binaries for programs
+*.exe
+*.exe~
+*.dll
+*.so
+*.dylib
+
+# Test binary, can be ignored
+*_test
+
+# Production binaries
+bin/
+results/
+
+# Dependency directories (golang dep)
+vendor/
+
+# Go workspace file
+go.work
+go.work.sum
+
+# Optional: Uncomment if you wish to ignore the default Go module cache.
+# Note: It is generally recommended to keep this tracked if you want
+# a fully reproducible build environment that is not dependent on
+# the user's local Go environment configuration.
+#/pkg/
