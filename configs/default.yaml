@@ -1,0 +1,13 @@
+# Default config for media-perms-manager
+roots:
+  - "."
+file_mode: "0775"
+dir_mode: "0775"
+owner: "media"
+group: "jellyfin"
+excludes:
+  - "*.trickplay"
+follow_symlinks: false
+dry_run: false
+concurrency: 4
+log_level: "info"
