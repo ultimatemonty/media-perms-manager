@@ -1,0 +1,34 @@
+[Unit]
+Description=Media Permissions Manager
+Documentation=https://github.com/ultimatemonty/media-perms-manager
+After=local-fs.target
+
+[Service]
+Type=simple
+ExecStart=/usr/local/bin/media-perms-manager \
+    --config /etc/media-perms-manager/config.yaml \
+    --watch \
+    --watch-initial-scan
+
+Restart=on-failure
+RestartSec=5s
+
+# Run as a dedicated service user; adjust as needed
+User=media
+Group=jellyfin
+
+# Logging
+StandardOutput=journal
+StandardError=journal
+SyslogIdentifier=media-perms-manager
+
+# Hardening
+NoNewPrivileges=true
+ProtectSystem=strict
+ProtectHome=true
+ReadWritePaths=/mnt/media
+PrivateTmp=true
+PrivateDevices=true
+
+[Install]
+WantedBy=multi-user.target
