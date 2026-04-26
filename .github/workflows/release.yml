@@ -8,6 +8,7 @@ on:
 permissions:
   actions: read
   contents: write
+  pull-requests: read
 
 jobs:
   verify-ci:
@@ -75,6 +76,102 @@ jobs:
           cd dist
           shasum -a 256 ./*.tar.xz > checksums.txt
 
+      - name: Collect commit and PR summary
+        id: changelog
+        uses: actions/github-script@v8
+        with:
+          script: |
+            const fs = require('fs');
+            const { owner, repo } = context.repo;
+            const currentTag = context.ref.replace('refs/tags/', '');
+            const headSha = context.sha;
+
+            const releases = await github.paginate(
+              github.rest.repos.listReleases,
+              { owner, repo, per_page: 100 }
+            );
+
+            const previousRelease = releases.find((release) =>
+              release.tag_name !== currentTag && !release.draft
+            );
+
+            let markdown = '### Commits and Pull Requests\n\n';
+
+            if (!previousRelease) {
+              markdown += '- No previous release found; skipping commit range generation.\n';
+              fs.writeFileSync('dist/commit-pr-summary.md', markdown);
+              return;
+            }
+
+            const baseTag = previousRelease.tag_name;
+            core.info(`Using commit range ${baseTag}...${headSha}`);
+
+            const comparison = await github.rest.repos.compareCommits({
+              owner,
+              repo,
+              base: baseTag,
+              head: headSha,
+            });
+
+            const commits = comparison.data.commits || [];
+            if (commits.length === 0) {
+              markdown += `- No commits found between ${baseTag} and ${currentTag}.\n`;
+              fs.writeFileSync('dist/commit-pr-summary.md', markdown);
+              return;
+            }
+
+            markdown += `Range: ${baseTag}...${currentTag}\n\n`;
+
+            for (const commit of commits) {
+              const shortSha = commit.sha.slice(0, 7);
+              const subject = (commit.commit.message || '').split('\n')[0];
+
+              let prSuffix = ' (no associated PR)';
+              try {
+                const prs = await github.rest.repos.listPullRequestsAssociatedWithCommit({
+                  owner,
+                  repo,
+                  commit_sha: commit.sha,
+                });
+
+                if (prs.data.length > 0) {
+                  const prLinks = prs.data
+                    .map((pr) => `[#${pr.number}](${pr.html_url})`)
+                    .join(', ');
+                  prSuffix = ` (${prLinks})`;
+                }
+              } catch (err) {
+                core.warning(`Failed to load PR mapping for ${commit.sha}: ${err.message}`);
+              }
+
+              markdown += `- ${shortSha} ${subject}${prSuffix}\n`;
+            }
+
+            fs.writeFileSync('dist/commit-pr-summary.md', markdown);
+
+      - name: Generate release notes
+        env:
+          RELEASE_TAG: ${{ github.ref_name }}
+        run: |
+          set -euo pipefail
+          release_number="${RELEASE_TAG#v}"
+
+          {
+            echo "## media-perms-manager ${release_number}"
+            echo
+            echo "### Artifacts"
+            echo "- media-perms-manager-${release_number}-darwin-arm64.tar.xz"
+            echo "- media-perms-manager-${release_number}-linux-amd64.tar.xz"
+            echo "- media-perms-manager-${release_number}-linux-arm64.tar.xz"
+            echo
+            echo "### Archive Checksums"
+            echo '```text'
+            cat dist/checksums.txt
+            echo '```'
+            echo
+            cat dist/commit-pr-summary.md
+          } > dist/release-notes.md
+
       - name: Upload workflow artifacts
         uses: actions/upload-artifact@v7
         with:
@@ -82,6 +179,8 @@ jobs:
           path: |
             dist/*.tar.xz
             dist/checksums.txt
+            dist/commit-pr-summary.md
+            dist/release-notes.md
           if-no-files-found: error
 
       - name: Publish GitHub Release
@@ -90,4 +189,5 @@ jobs:
           files: |
             dist/*.tar.xz
             dist/checksums.txt
+          body_path: dist/release-notes.md
           generate_release_notes: true
