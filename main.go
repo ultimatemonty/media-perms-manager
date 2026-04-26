@@ -17,6 +17,8 @@ import (
 	"github.com/ultimatemonty/media-perms-manager/internal/watcher"
 )
 
+var version = "dev"
+
 func main() {
 	var (
 		cfgPath          string
@@ -33,6 +35,7 @@ func main() {
 		watch            bool
 		watchDelay       time.Duration
 		watchInitialScan bool
+		showVersion      bool
 	)
 
 	flag.StringVar(&cfgPath, "config", "", "path to YAML config file (overridden by flags/env)")
@@ -49,7 +52,13 @@ func main() {
 	flag.BoolVar(&watch, "watch", false, "enable watch mode (continuously watch for changes)")
 	flag.DurationVar(&watchDelay, "watch-delay", 500*time.Millisecond, "debounce delay for rapid fs events")
 	flag.BoolVar(&watchInitialScan, "watch-initial-scan", false, "run full scan before entering watch mode")
+	flag.BoolVar(&showVersion, "version", false, "print version and exit")
 	flag.Parse()
+
+	if showVersion {
+		fmt.Println(version)
+		return
+	}
 
 	// Load YAML config (with defaults)
 	cfg, err := config.Load(cfgPath)

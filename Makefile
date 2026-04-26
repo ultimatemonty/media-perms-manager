@@ -52,7 +52,7 @@ $(BUILD_DIR)/$(APP_NAME)-$(RELEASE_NUMBER)-%/.built:
 	binary_path="$(@D)/$(APP_NAME)"; \
 	rm -rf "$(@D)"; \
 	mkdir -p "$(@D)"; \
-	CGO_ENABLED=0 GOOS="$$goos" GOARCH="$$goarch" $(GO) build -o "$$binary_path" ./; \
+	CGO_ENABLED=0 GOOS="$$goos" GOARCH="$$goarch" $(GO) build -ldflags "-X main.version=$(RELEASE_NUMBER)" -o "$$binary_path" ./; \
 	chmod 755 "$$binary_path"; \
 	(cd "$(@D)" && $(SHASUM) "$(APP_NAME)" > "$(APP_NAME).sha256"); \
 	touch "$@"

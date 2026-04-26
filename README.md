@@ -15,6 +15,11 @@ Build (output to `bin/`):
 go build -o bin/mpm ./...
 ```
 
+Build with explicit version metadata:
+```bash
+go build -ldflags "-X main.version=1.2.3" -o bin/mpm ./...
+```
+
 Release packages:
 ```bash
 make release RELEASE_NUMBER=1.2.3
@@ -55,6 +60,11 @@ Pushing a `v*` tag triggers `.github/workflows/release.yml`, which runs `make re
 Run (dry-run):
 ```bash
 ./media-perms-manager --dry-run
+```
+
+Show version:
+```bash
+./media-perms-manager --version
 ```
 
 Run in watch mode (continuously monitor roots for new/changed files and directories):
