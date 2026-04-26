@@ -11,6 +11,7 @@
 # Production binaries
 bin/
 results/
+dist/
 
 # Dependency directories (golang dep)
 vendor/

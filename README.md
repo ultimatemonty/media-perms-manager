@@ -15,6 +15,43 @@ Build (output to `bin/`):
 go build -o bin/mpm ./...
 ```
 
+Release packages:
+```bash
+make release RELEASE_NUMBER=1.2.3
+```
+
+Or run the stages separately:
+```bash
+make build RELEASE_NUMBER=1.2.3
+make package RELEASE_NUMBER=1.2.3
+```
+
+This produces `.tar.xz` archives in `dist/` for `darwin/arm64`, `linux/amd64`, and `linux/arm64`. Each archive contains the `media-perms-manager` executable with execute permissions preserved and a matching `media-perms-manager.sha256` file.
+
+GitHub release automation:
+```bash
+git tag v1.2.3
+git push origin v1.2.3
+```
+
+Or use Makefile helpers to automate tag creation and push:
+```bash
+make tag-and-push VERSION=1.2.3
+```
+
+Optional controls:
+- `REMOTE` (default: `origin`)
+- `TAG_PREFIX` (default: `v`)
+
+Examples:
+```bash
+make tag VERSION=1.2.3
+make push-tag VERSION=1.2.3
+make tag-and-push VERSION=1.2.3 REMOTE=origin TAG_PREFIX=v
+```
+
+Pushing a `v*` tag triggers `.github/workflows/release.yml`, which runs `make release RELEASE_NUMBER=<tag without v>`, uploads artifacts, and publishes a GitHub Release with the generated `.tar.xz` files plus an archive checksum manifest.
+
 Run (dry-run):
 ```bash
 ./media-perms-manager --dry-run

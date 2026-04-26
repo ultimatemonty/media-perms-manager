@@ -1,0 +1,93 @@
+name: Release
+
+on:
+  push:
+    tags:
+      - "v*"
+
+permissions:
+  actions: read
+  contents: write
+
+jobs:
+  verify-ci:
+    runs-on: ubuntu-latest
+
+    steps:
+      - name: Verify tests passed for tagged commit
+        uses: actions/github-script@v8
+        with:
+          script: |
+            const { owner, repo } = context.repo;
+            const headSha = context.sha;
+
+            const runs = await github.paginate(
+              github.rest.actions.listWorkflowRuns,
+              {
+                owner,
+                repo,
+                workflow_id: 'tests.yml',
+                head_sha: headSha,
+                status: 'completed',
+                per_page: 100,
+              }
+            );
+
+            const successfulRun = runs.find((run) => run.conclusion === 'success');
+            if (!successfulRun) {
+              core.setFailed(
+                `No successful tests workflow run found for commit ${headSha}. ` +
+                `Run CI first before creating/pushing the release tag.`
+              );
+              return;
+            }
+
+            core.info(
+              `Verified CI passed via run #${successfulRun.run_number}: ${successfulRun.html_url}`
+            );
+
+  release:
+    needs: verify-ci
+    runs-on: ubuntu-latest
+
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v6
+
+      - name: Set up Go
+        uses: actions/setup-go@v6
+        with:
+          go-version-file: go.mod
+          cache: true
+
+      - name: Build release artifacts
+        env:
+          RELEASE_NUMBER: ${{ github.ref_name }}
+        run: |
+          set -euo pipefail
+          release_number="${RELEASE_NUMBER#v}"
+          make clean
+          make release RELEASE_NUMBER="${release_number}"
+
+      - name: Generate archive checksums
+        run: |
+          set -euo pipefail
+          cd dist
+          shasum -a 256 ./*.tar.xz > checksums.txt
+
+      - name: Upload workflow artifacts
+        uses: actions/upload-artifact@v7
+        with:
+          name: media-perms-manager-release-${{ github.ref_name }}
+          path: |
+            dist/*.tar.xz
+            dist/checksums.txt
+          if-no-files-found: error
+
+      - name: Publish GitHub Release
+        uses: softprops/action-gh-release@v3
+        with:
+          files: |
+            dist/*.tar.xz
+            dist/checksums.txt
+          generate_release_notes: true
