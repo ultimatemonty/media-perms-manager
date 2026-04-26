@@ -1,3 +1,5 @@
+SHELL := /bin/bash
+
 APP_NAME := media-perms-manager
 RELEASE_NUMBER ?= dev
 DIST_DIR := dist
